@@ -212,8 +212,19 @@ const BRAND_MATCHERS = [
   ['projector_cn', /\b(xgimi|jmgo|wanbo|dangbei|formovie|fengmi|hy300|hy320|magcubic|projector)\b/i]
 ];
 
+const SAFE_PACKAGE_RE = /^[A-Za-z][A-Za-z0-9_]*(?:\.[A-Za-z0-9_]+)+$/;
+const SAFE_COMPONENT_RE = /^[A-Za-z][A-Za-z0-9_]*(?:\.[A-Za-z0-9_]+)+\/[A-Za-z0-9_.$]+$/;
+
 function cleanStr(val) {
   return String(val === undefined || val === null ? '' : val).trim();
+}
+
+function isSafePackageName(pkg) {
+  return typeof pkg === 'string' && SAFE_PACKAGE_RE.test(pkg);
+}
+
+function isSafeComponentId(id) {
+  return typeof id === 'string' && SAFE_COMPONENT_RE.test(id);
 }
 
 function sanitizeDeviceId(serialOrIp) {
@@ -368,9 +379,9 @@ async function ensureAdbBinary() {
   console.log(`[ADB] Đang tự động tải Google Platform-Tools (${HOST_CFG.zipOs})...`);
   await downloadToFile(url, zipDest);
   fs.mkdirSync(TOOLCHAIN_DIR, { recursive: true });
-  const tarRun = spawnSync('tar', ['-xf', zipDest, '-C', TOOLCHAIN_DIR], { stdio: 'inherit' });
+  const tarRun = spawnSync('tar', ['-xf', zipDest, '-C', TOOLCHAIN_DIR], { stdio: 'inherit', timeout: 30000 });
   if (tarRun.status !== 0) {
-    execFileSync('unzip', ['-q', '-o', zipDest, '-d', TOOLCHAIN_DIR], { stdio: 'inherit' });
+    execFileSync('unzip', ['-q', '-o', zipDest, '-d', TOOLCHAIN_DIR], { stdio: 'inherit', timeout: 30000 });
   }
   const adbPath = path.join(TOOLCHAIN_DIR, 'platform-tools', `adb${HOST_CFG.exe}`);
   if (process.platform !== 'win32' && fs.existsSync(adbPath)) fs.chmodSync(adbPath, 0o755);
@@ -466,7 +477,7 @@ function listEnabledPackagesOnTv(adbBin, target) {
   return adbMust(adbBin, target, ['shell', 'pm list packages -e'], 10000)
     .split(/\r?\n/)
     .map((l) => l.replace(/^package:/, '').trim())
-    .filter(Boolean);
+    .filter(isSafePackageName);
 }
 
 function savePreOptimizeSnapshot(backupBaseDir, deviceKey, snapshotPayload) {
@@ -481,7 +492,9 @@ function savePreOptimizeSnapshot(backupBaseDir, deviceKey, snapshotPayload) {
   const prevPkgs = existing && Array.isArray(existing.enabledPackagesBeforeOptimize)
     ? existing.enabledPackagesBeforeOptimize
     : [];
-  const mergedEnabled = [...new Set([...prevPkgs, ...snapshotPayload.enabledPackagesBeforeOptimize])];
+  const mergedEnabled = [...new Set([...prevPkgs, ...snapshotPayload.enabledPackagesBeforeOptimize])].filter(
+    isSafePackageName
+  );
   const preservedSettings = existing && existing.previousSettings
     ? existing.previousSettings
     : snapshotPayload.previousSettings;
@@ -524,8 +537,8 @@ function mergeAccessibilityServices(currentRaw) {
   const parts = cleanStr(currentRaw)
     .split(':')
     .map((s) => s.trim())
-    .filter((s) => Boolean(s) && s !== 'null');
-  return [...new Set([...parts, VN_HOME_KEY_SERVICE_ID])].join(':');
+    .filter(isSafeComponentId);
+  return [...new Set([...parts, VN_HOME_KEY_SERVICE_ID])].filter(isSafeComponentId).join(':');
 }
 
 function shouldSetVietTvVoiceService(profileKey, curVoice) {
@@ -535,13 +548,19 @@ function shouldSetVietTvVoiceService(profileKey, curVoice) {
   return isCnRomProfile && nonClobbering;
 }
 
-async function installVietTvLauncher(adbBin, target, args) {
+async function resolveLauncherApkPath(args) {
   const apkIdx = args.indexOf('--apk');
   const candidateApk = apkIdx !== -1 && args[apkIdx + 1] ? path.resolve(args[apkIdx + 1]) : DIST_APK_PATH;
-  const apkPath = fs.existsSync(candidateApk)
-    ? candidateApk
-    : (await require('../scripts/build_apk').buildApk({ autoToolchain: true })).apkPath;
+  if (fs.existsSync(candidateApk)) return candidateApk;
+  const built = await require('../scripts/build_apk').buildApk({ autoToolchain: true });
+  return built.apkPath;
+}
 
+async function installVietTvLauncher(adbBin, target, args) {
+  if (!isSafePackageName(LAUNCHER_PKG) || !isSafeComponentId(VN_TV_IME_ID)) {
+    throw new Error('Invalid launcher package or IME component constant');
+  }
+  const apkPath = await resolveLauncherApkPath(args);
   connectTargetTv(adbBin, target);
   const detected = detectBrandProfile(readTvHardwareProps(adbBin, target));
   adbMust(adbBin, target, ['install', '-r', apkPath], 90000);
@@ -568,7 +587,7 @@ async function installVietTvLauncher(adbBin, target, args) {
   setupCmds.forEach((cmd) => adbTry(adbBin, target, ['shell', cmd], 6000));
 
   const curVoice = adbTry(adbBin, target, ['shell', 'settings get secure voice_recognition_service']).stdout;
-  if (shouldSetVietTvVoiceService(detected.profileKey, curVoice)) {
+  if (shouldSetVietTvVoiceService(detected.profileKey, curVoice) && isSafeComponentId(VN_VOICE_RECOG_ID)) {
     adbTry(adbBin, target, ['shell', `settings put secure voice_recognition_service ${VN_VOICE_RECOG_ID}`]);
     adbTry(adbBin, target, ['shell', `settings put secure assistant ${VN_VOICE_ASSIST_ID}`]);
   }
@@ -591,7 +610,9 @@ function applyXiaomiSafeHooks(adbBin, target, enabledSet, stockLauncher) {
     'com.xiaomi.mitv.settings',
     'com.xiaomi.mitv.smartpanel',
     'com.xiaomi.mitv.tvplayer'
-  ].forEach((pkg) => adbTry(adbBin, target, ['shell', `pm enable --user 0 ${pkg}`], 5000));
+  ]
+    .filter(isSafePackageName)
+    .forEach((pkg) => adbTry(adbBin, target, ['shell', `pm enable --user 0 ${pkg}`], 5000));
 
   const preservedBleMacs = preserveXiaomiBleWakeup(adbBin, target);
   [
@@ -604,7 +625,7 @@ function applyXiaomiSafeHooks(adbBin, target, enabledSet, stockLauncher) {
 
   const homeOut = adbTry(adbBin, target, ['shell', 'cmd shortcut get-default-launcher'], 5000).stdout;
   const frozeStock = Boolean(
-    stockLauncher &&
+    isSafePackageName(stockLauncher) &&
       enabledSet.has(LAUNCHER_PKG) &&
       homeOut.includes(LAUNCHER_PKG) &&
       adbTry(adbBin, target, ['shell', `pm disable-user --user 0 ${stockLauncher}; am force-stop ${stockLauncher}`], 6000).ok
@@ -639,7 +660,7 @@ async function optimizeTv(adbBin, target, args, options = {}) {
       : [];
 
   const candidates = [...detected.profile.bloatware, ...otaExtra, ...imeExtra].filter(
-    (pkg) => !protectedSet.has(pkg) && enabledSet.has(pkg)
+    (pkg) => isSafePackageName(pkg) && !protectedSet.has(pkg) && enabledSet.has(pkg)
   );
   const disabled = candidates.filter(
     (pkg) => adbTry(adbBin, target, ['shell', `pm disable-user --user 0 ${pkg}; am force-stop ${pkg}`], 6000).ok
@@ -667,7 +688,10 @@ async function optimizeTv(adbBin, target, args, options = {}) {
   ].forEach((cmd) => adbTry(adbBin, target, ['shell', cmd], 5000));
 
   const compiledApps = CORE_STREAMING_AOT_PACKAGES.filter(
-    (pkg) => enabledSet.has(pkg) && adbTry(adbBin, target, ['shell', `cmd package compile -m speed -f ${pkg}`], 60000).ok
+    (pkg) =>
+      isSafePackageName(pkg) &&
+      enabledSet.has(pkg) &&
+      adbTry(adbBin, target, ['shell', `cmd package compile -m speed -f ${pkg}`], 60000).ok
   );
 
   return {
@@ -693,8 +717,11 @@ async function restoreTvFromSnapshot(adbBin, target, options = {}) {
   }
 
   const currentlyEnabled = new Set(listEnabledPackagesOnTv(adbBin, target));
-  const reEnabled = loaded.snapshot.enabledPackagesBeforeOptimize
-    .filter((pkg) => !currentlyEnabled.has(pkg))
+  const savedPkgs = Array.isArray(loaded.snapshot.enabledPackagesBeforeOptimize)
+    ? loaded.snapshot.enabledPackagesBeforeOptimize
+    : [];
+  const reEnabled = savedPkgs
+    .filter((pkg) => isSafePackageName(pkg) && !currentlyEnabled.has(pkg))
     .filter((pkg) => adbTry(adbBin, target, ['shell', `pm enable --user 0 ${pkg}`], 6000).ok);
 
   [
@@ -704,7 +731,7 @@ async function restoreTvFromSnapshot(adbBin, target, options = {}) {
   ].forEach((cmd) => adbTry(adbBin, target, ['shell', cmd], 5000));
 
   const prevIme = cleanStr(Object(loaded.snapshot.previousSettings).defaultIme);
-  if (/^[^/\s]+\/[^/\s]+$/.test(prevIme) && prevIme !== 'null') {
+  if (isSafeComponentId(prevIme)) {
     adbTry(adbBin, target, ['shell', `ime enable ${prevIme}`], 5000);
     adbTry(adbBin, target, ['shell', `ime set ${prevIme}`], 5000);
   }
@@ -719,27 +746,40 @@ async function restoreTvFromSnapshot(adbBin, target, options = {}) {
   };
 }
 
-async function installOfflineVietnameseVoice(adbBin, target, args) {
-  connectTargetTv(adbBin, target);
-  const props = readTvHardwareProps(adbBin, target);
-  const abiKey = props.abi.includes('arm64') ? 'arm64-v8a' : props.abi.includes('x86_64') ? 'x86_64' : 'armeabi-v7a';
+function selectOfflineAsrAbi(abiRaw) {
+  if (abiRaw.includes('arm64')) return 'arm64-v8a';
+  return abiRaw.includes('x86_64') ? 'x86_64' : 'armeabi-v7a';
+}
+
+async function resolveOfflineAsrApk(abiKey, args) {
   const customIdx = args.indexOf('--offline-apk');
   const source = customIdx !== -1 && args[customIdx + 1] ? args[customIdx + 1] : SHERPA_ONNX_VI_APKS[abiKey];
-
-  const localApkPath = /^https?:\/\//i.test(source)
+  const isRemote = /^https?:\/\//i.test(source);
+  const localApkPath = isRemote
     ? path.join(TOOLCHAIN_DIR, 'offline-voice', path.basename(new URL(source).pathname))
     : path.resolve(source);
 
-  if (/^https?:\/\//i.test(source) && !fs.existsSync(localApkPath)) {
+  if (isRemote && !fs.existsSync(localApkPath)) {
     console.log(`🎙️ Đang tải gói K2-FSA Sherpa-ONNX Tiếng Việt Offline (${abiKey})...`);
     await downloadToFile(source, localApkPath);
   }
+  return localApkPath;
+}
+
+async function installOfflineVietnameseVoice(adbBin, target, args) {
+  connectTargetTv(adbBin, target);
+  const abiKey = selectOfflineAsrAbi(readTvHardwareProps(adbBin, target).abi);
+  const localApkPath = await resolveOfflineAsrApk(abiKey, args);
 
   const beforeSet = new Set(listEnabledPackagesOnTv(adbBin, target));
   adbMust(adbBin, target, ['install', '-r', localApkPath], 120000);
-  const afterList = listEnabledPackagesOnTv(adbBin, target);
-  const foundPkg = afterList.find((p) => !beforeSet.has(p) && /sherpa|k2fsa|asr/i.test(p));
+  const foundPkg = listEnabledPackagesOnTv(adbBin, target).find(
+    (p) => !beforeSet.has(p) && /sherpa|k2fsa|asr/i.test(p)
+  );
   const pkgName = foundPkg ? foundPkg : 'com.k2fsa.sherpa.onnx.simulate.streaming.asr';
+  if (!isSafePackageName(pkgName)) {
+    throw new Error(`Unsafe offline ASR package identifier: ${pkgName}`);
+  }
 
   adbTry(adbBin, target, ['shell', `pm grant ${pkgName} android.permission.RECORD_AUDIO`], 6000);
   adbTry(adbBin, target, ['shell', `appops set ${pkgName} RECORD_AUDIO allow`], 6000);
@@ -750,14 +790,19 @@ async function installOfflineVietnameseVoice(adbBin, target, args) {
     ['shell', 'cmd package query-services --brief -a android.speech.RecognitionService'],
     8000
   ).stdout.split(/\r?\n/).map((l) => l.trim());
-  const sherpaSvc = svcLines.find((c) => c.startsWith(`${pkgName}/`));
+  const sherpaSvc = svcLines.find((c) => c.startsWith(`${pkgName}/`) && isSafeComponentId(c));
   const chosenSvc = sherpaSvc ? sherpaSvc : VN_VOICE_RECOG_ID;
-  adbTry(adbBin, target, ['shell', `settings put secure voice_recognition_service ${chosenSvc}`], 5000);
+  if (isSafeComponentId(chosenSvc)) {
+    adbTry(adbBin, target, ['shell', `settings put secure voice_recognition_service ${chosenSvc}`], 5000);
+  }
 
   return { status: 'OK', target, cpuAbi: abiKey, installedPackage: pkgName, recognitionService: chosenSvc, apkPath: localApkPath };
 }
 
 function setOtaState(adbBin, target, enableOta) {
+  if (!isSafePackageName(XIAOMI_OTA_UPDATER_PKG)) {
+    throw new Error(`Unsafe OTA package identifier: ${XIAOMI_OTA_UPDATER_PKG}`);
+  }
   connectTargetTv(adbBin, target);
   const sub = enableOta ? 'enable' : 'disable-user';
   adbMust(adbBin, target, ['shell', `pm ${sub} --user 0 ${XIAOMI_OTA_UPDATER_PKG}`], 6000);
@@ -789,12 +834,28 @@ function runSelfCheck() {
   if (protectedSet.size !== UNIVERSAL_PROTECTED_PACKAGES.length) {
     throw new Error('Duplicate package in UNIVERSAL_PROTECTED_PACKAGES');
   }
+  if (!UNIVERSAL_PROTECTED_PACKAGES.every(isSafePackageName) || !CORE_STREAMING_AOT_PACKAGES.every(isSafePackageName)) {
+    throw new Error('Malformed package identifier in core package lists');
+  }
+  const coreComponents = [
+    VN_TV_IME_ID,
+    VN_VOICE_RECOG_ID,
+    VN_VOICE_ASSIST_ID,
+    VN_HOME_KEY_SERVICE_ID,
+    VN_CLOCK_DREAM_ID
+  ];
+  if (!coreComponents.every(isSafeComponentId)) {
+    throw new Error('Malformed component identifier in core constants');
+  }
 
   const brandProfiles = {};
   for (const [key, profile] of Object.entries(BRAND_PROFILES)) {
     const bloatSet = new Set(profile.bloatware);
     if (bloatSet.size !== profile.bloatware.length) {
       throw new Error(`Duplicate package in BRAND_PROFILES.${key}`);
+    }
+    if (!profile.bloatware.every(isSafePackageName)) {
+      throw new Error(`Unsafe package identifier in BRAND_PROFILES.${key}`);
     }
     const overlap = profile.bloatware.filter((pkg) => protectedSet.has(pkg));
     if (overlap.length > 0) {
@@ -818,7 +879,7 @@ function runSelfCheck() {
 const runSyntaxCheck = runSelfCheck;
 
 async function runWizard(args) {
-  console.log('\n=== VIETTV LAUNCHER & TỐI ƯU TIVI ĐA HÃNG (v1.0.0) ===');
+  console.log('\n=== VIETTV LAUNCHER & TỐI ƯU TIVI ĐA HÃNG (v1.0.1) ===');
   console.log('  1. Tự tìm Tivi & Cài trọn bộ Giao diện + Bàn phím Telex + Tối ưu RAM');
   console.log('  2. Chỉ cài Giao diện & Bàn phím Tiếng Việt');
   console.log('  3. Cài thêm Gói Giọng Nói Tiếng Việt Offline (cho Tivi nội địa cắt Google)');
@@ -888,6 +949,8 @@ module.exports = {
   CORE_STREAMING_AOT_PACKAGES,
   BRAND_PROFILES,
   SHERPA_ONNX_VI_APKS,
+  isSafePackageName,
+  isSafeComponentId,
   sanitizeDeviceId,
   normalizeTargetIp,
   detectBrandProfile,

@@ -203,6 +203,32 @@ test('5. JDK 17 JVM Verification Hook for Launcher Core Engines', (t) => {
       '    if (z1[0] != 21500 || z2[0] != 21930 || z1[1] != 20400 || z2[1] != 20800) {',
       '      throw new AssertionError("Fuel Zone 1 vs Zone 2 mismatch");',
       '    }',
+      '    try {',
+      '      Method validateUrl = null;',
+      '      try {',
+      '        validateUrl = VoiceSttClient.class.getMethod("validateEndpointUrl", String.class);',
+      '      } catch (NoSuchMethodException fallbackEx) {',
+      '        validateUrl = VoiceSttClient.class.getDeclaredMethod("validateEndpointUrl", String.class);',
+      '        validateUrl.setAccessible(true);',
+      '      }',
+      '      validateUrl.invoke(null, "https://api.groq.com/openai/v1/audio/transcriptions");',
+      '      validateUrl.invoke(null, "http://192.168.1.10:8000/v1/audio/transcriptions");',
+      '      for (String badUrl : new String[]{"http://api.groq.com/v1", "http://8.8.8.8:8000/v1"}) {',
+      '        boolean blocked = false;',
+      '        try {',
+      '          validateUrl.invoke(null, badUrl);',
+      '        } catch (InvocationTargetException ite) {',
+      '          if (ite.getCause() instanceof java.io.IOException) {',
+      '            blocked = true;',
+      '          } else {',
+      '            throw new AssertionError("Expected IOException for " + badUrl + ", got: " + ite.getCause());',
+      '          }',
+      '        }',
+      '        if (!blocked) throw new AssertionError("Insecure STT URL was not rejected: " + badUrl);',
+      '      }',
+      '    } catch (NoSuchMethodException ignored) {',
+      '      // Reflection guard when validateEndpointUrl is not yet present',
+      '    }',
       '    System.out.println("JVM_SUITE_OK");',
       '  }',
       '}'
@@ -229,4 +255,119 @@ test('5. JDK 17 JVM Verification Hook for Launcher Core Engines', (t) => {
   fs.rmSync(tmpJvm, { recursive: true, force: true });
   assert.equal(runRes.status, 0, `JVM suite failed: ${runRes.stderr}`);
   assert.ok(runRes.stdout.includes('JVM_SUITE_OK'));
+});
+
+test('6. ADB Shell Injection Hardening (isSafePackageName & isSafeComponentId)', () => {
+  const validPackages = [
+    'vn.viettv.launcher',
+    'org.smarttube.stable',
+    'com.k2fsa.sherpa.onnx.simulate.streaming.asr',
+    'com.xiaomi.mitv.tvplayer'
+  ];
+  for (const pkg of validPackages) {
+    assert.equal(viettv.isSafePackageName(pkg), true, `Expected valid package: ${pkg}`);
+  }
+
+  const poisonedPackages = [
+    'com.evil.app; reboot',
+    'vn.viettv/.Ime$(id)',
+    '../etc/passwd',
+    'com.evil.`id`',
+    'com.evil.app && rm -rf /',
+    'com.evil app',
+    '123.invalid.start',
+    'singleword',
+    '',
+    null,
+    undefined
+  ];
+  for (const badPkg of poisonedPackages) {
+    assert.equal(viettv.isSafePackageName(badPkg), false, `Expected poisoned package to be blocked: ${badPkg}`);
+  }
+
+  const validComponents = [
+    'vn.viettv.launcher/.VnTvImeService',
+    'vn.viettv.launcher/.HomeKeyService',
+    'flar2.homebutton/.a11y',
+    'com.k2fsa.sherpa.onnx/.RecognitionService$Inner'
+  ];
+  for (const comp of validComponents) {
+    assert.equal(viettv.isSafeComponentId(comp), true, `Expected valid component: ${comp}`);
+  }
+
+  const poisonedComponents = [
+    'com.evil.app; reboot',
+    'vn.viettv/.Ime$(id)',
+    '../etc/passwd',
+    'vn.viettv.launcher/.Ime`id`',
+    'vn.viettv.launcher/.Ime space',
+    'vn.viettv.launcher/',
+    'vn.viettv.launcher',
+    'null',
+    '',
+    null
+  ];
+  for (const badComp of poisonedComponents) {
+    assert.equal(viettv.isSafeComponentId(badComp), false, `Expected poisoned component to be blocked: ${badComp}`);
+  }
+
+  assert.equal(
+    viettv.mergeAccessibilityServices('com.evil.app/.Svc; reboot:vn.viettv/.Ime$(id):flar2.homebutton/.a11y'),
+    'flar2.homebutton/.a11y:vn.viettv.launcher/.HomeKeyService'
+  );
+
+  const tmpSnapDir = fs.mkdtempSync(path.join(os.tmpdir(), 'viettv-poison-'));
+  const snapRes = viettv.savePreOptimizeSnapshot(tmpSnapDir, '192.168.1.99:5555', {
+    target: '192.168.1.99:5555',
+    props: { model: 'TV' },
+    brandProfile: 'generic',
+    enabledPackagesBeforeOptimize: ['vn.viettv.launcher', 'com.evil.app; reboot', '../etc/passwd'],
+    previousSettings: { defaultIme: 'vn.viettv/.Ime$(id)' }
+  });
+  assert.deepEqual(snapRes.snapshot.enabledPackagesBeforeOptimize, ['vn.viettv.launcher']);
+  fs.rmSync(tmpSnapDir, { recursive: true, force: true });
+});
+
+test('7. Showcase Screenshots Integrity (1920x1080 RGB PNG & Zero EXIF/Metadata Chunks)', () => {
+  const expectedPngs = [
+    '01-home-dashboard.png',
+    '02-telex-keyboard.png',
+    '03-voice-assistant.png',
+    '04-customization-and-brands.png'
+  ];
+  const pngSig = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+  const forbiddenChunks = new Set(['eXIf', 'tEXt', 'iTXt', 'zTXt']);
+
+  for (const fileName of expectedPngs) {
+    const filePath = path.join(REPO_ROOT, 'docs', 'screenshots', fileName);
+    assert.ok(fs.existsSync(filePath), `Missing showcase screenshot: ${fileName}`);
+    const buf = fs.readFileSync(filePath);
+    assert.ok(buf.length > 24, `Invalid PNG size: ${fileName}`);
+    assert.deepEqual(buf.subarray(0, 8), pngSig, `Invalid PNG magic header: ${fileName}`);
+
+    const firstChunkType = buf.subarray(12, 16).toString('latin1');
+    assert.equal(firstChunkType, 'IHDR', `First chunk must be IHDR: ${fileName}`);
+    const width = buf.readUInt32BE(16);
+    const height = buf.readUInt32BE(20);
+    assert.equal(width, 1920, `Expected width 1920 in ${fileName}, got ${width}`);
+    assert.equal(height, 1080, `Expected height 1080 in ${fileName}, got ${height}`);
+
+    let offset = 8;
+    const leakedMeta = [];
+    let sawIend = false;
+    while (offset + 12 <= buf.length) {
+      const chunkLen = buf.readUInt32BE(offset);
+      const chunkType = buf.subarray(offset + 4, offset + 8).toString('latin1');
+      if (forbiddenChunks.has(chunkType)) {
+        leakedMeta.push(chunkType);
+      }
+      if (chunkType === 'IEND') {
+        sawIend = true;
+        break;
+      }
+      offset += 12 + chunkLen;
+    }
+    assert.equal(sawIend, true, `PNG missing IEND terminator: ${fileName}`);
+    assert.deepEqual(leakedMeta, [], `Metadata chunks leaked in ${fileName}: ${leakedMeta.join(', ')}`);
+  }
 });

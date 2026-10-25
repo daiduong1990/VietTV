@@ -10,6 +10,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
@@ -163,6 +164,89 @@ public final class VoiceSttClient {
         dst[pos + 3] = (byte) ((val >>> 24) & 0xFF);
     }
 
+    public static void validateEndpointUrl(String rawUrl) throws IOException {
+        String trimmed = Objects.toString(rawUrl, "").trim();
+        if (trimmed.isEmpty()) {
+            throw new IOException("INVALID_STT_URL");
+        }
+        final URL u;
+        try {
+            u = new URL(trimmed);
+        } catch (MalformedURLException e) {
+            throw new IOException("INVALID_STT_URL", e);
+        }
+        String protocol = Objects.toString(u.getProtocol(), "").toLowerCase(Locale.ROOT);
+        if (!"https".equals(protocol) && !"http".equals(protocol)) {
+            throw new IOException("UNSUPPORTED_STT_PROTOCOL");
+        }
+        String host = Objects.toString(u.getHost(), "").trim().toLowerCase(Locale.ROOT);
+        if (host.isEmpty()) {
+            throw new IOException("INVALID_STT_URL");
+        }
+        if ("https".equals(protocol)) {
+            return;
+        }
+        if (!isPrivateLanOrLoopbackHost(host)) {
+            throw new IOException("INSECURE_CLEARTEXT_ENDPOINT_BLOCKED");
+        }
+    }
+
+    public static boolean isPrivateLanOrLoopbackHost(String rawHost) {
+        String host = Objects.toString(rawHost, "").trim().toLowerCase(Locale.ROOT);
+        if (host.isEmpty()) {
+            return false;
+        }
+        if ("localhost".equals(host) || "[::1]".equals(host) || "::1".equals(host)) {
+            return true;
+        }
+        if (host.length() > ".local".length() && host.charAt(0) != '.' && host.endsWith(".local")) {
+            return true;
+        }
+        int[] octets = parseIpv4Octets(host);
+        if (octets == null) {
+            return false;
+        }
+        int a = octets[0];
+        int b = octets[1];
+        if (a == 127 || a == 10) {
+            return true;
+        }
+        if (a == 192 && b == 168) {
+            return true;
+        }
+        return a == 172 && b >= 16 && b <= 31;
+    }
+
+    private static int[] parseIpv4Octets(String host) {
+        String[] parts = host.split("\\.", -1);
+        if (parts.length != 4) {
+            return null;
+        }
+        int[] octets = new int[4];
+        for (int i = 0; i < 4; i++) {
+            String part = parts[i];
+            if (part.isEmpty() || part.length() > 3) {
+                return null;
+            }
+            if (part.length() > 1 && part.charAt(0) == '0') {
+                return null;
+            }
+            int val = 0;
+            for (int j = 0; j < part.length(); j++) {
+                char c = part.charAt(j);
+                if (c < '0' || c > '9') {
+                    return null;
+                }
+                val = val * 10 + (c - '0');
+            }
+            if (val < 0 || val > 255) {
+                return null;
+            }
+            octets[i] = val;
+        }
+        return octets;
+    }
+
     public static String transcribeMultipartWhisper(
             byte[] pcm16kBytes,
             String endpointUrl,
@@ -172,6 +256,7 @@ public final class VoiceSttClient {
         if (cleanUrl.isEmpty()) {
             throw new IOException("NO_STT_KEY_CONFIGURED");
         }
+        validateEndpointUrl(cleanUrl);
         byte[] wavBytes = wrapPcm16kMonoAsWav(pcm16kBytes);
         if (wavBytes.length <= 44) {
             return "";
@@ -181,6 +266,7 @@ public final class VoiceSttClient {
 
         HttpURLConnection conn = (HttpURLConnection) new URL(cleanUrl).openConnection();
         try {
+            conn.setInstanceFollowRedirects(false);
             conn.setRequestMethod("POST");
             conn.setDoInput(true);
             conn.setDoOutput(true);
@@ -253,6 +339,7 @@ public final class VoiceSttClient {
         String encodedKey = URLEncoder.encode(apiKey, StandardCharsets.UTF_8.name());
         HttpURLConnection conn = (HttpURLConnection) new URL(ENDPOINT_BASE + encodedKey).openConnection();
         try {
+            conn.setInstanceFollowRedirects(false);
             conn.setRequestMethod("POST");
             conn.setDoInput(true);
             conn.setDoOutput(true);

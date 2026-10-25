@@ -6,9 +6,11 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.os.Binder;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.Process;
 import android.os.RemoteException;
 import android.speech.RecognitionListener;
 import android.speech.RecognitionService;
@@ -41,17 +43,57 @@ public class VnRecognitionService extends RecognitionService {
     private SpeechRecognizer delegateRecognizer;
     private boolean beginningReported = false;
 
+    private boolean isCallerAuthorizedForMic() {
+        int callingUid = Binder.getCallingUid();
+        if (callingUid == Process.myUid() || callingUid == Process.SYSTEM_UID || callingUid == 2000) {
+            return true;
+        }
+        return checkPermission(Manifest.permission.RECORD_AUDIO, Binder.getCallingPid(), callingUid)
+                == PackageManager.PERMISSION_GRANTED;
+    }
+
+    private boolean isCallbackCallerAuthorized(Callback listener) {
+        if (listener == null) {
+            return true;
+        }
+        int callbackUid = listener.getCallingUid();
+        if (callbackUid <= 0
+                || callbackUid == Process.myUid()
+                || callbackUid == Process.SYSTEM_UID
+                || callbackUid == 2000) {
+            return true;
+        }
+        PackageManager pm = getPackageManager();
+        if (pm == null) {
+            return false;
+        }
+        String[] pkgs = pm.getPackagesForUid(callbackUid);
+        if (pkgs == null || pkgs.length == 0) {
+            return false;
+        }
+        for (String pkg : pkgs) {
+            if (pkg != null && pm.checkPermission(Manifest.permission.RECORD_AUDIO, pkg)
+                    == PackageManager.PERMISSION_GRANTED) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     @Override
     protected void onStartListening(Intent recognizerIntent, final Callback listener) {
-        cancelCurrentSession();
         if (listener == null) {
             return;
         }
 
-        if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+        if (!isCallerAuthorizedForMic()
+                || !isCallbackCallerAuthorized(listener)
+                || checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
             sendErrorSafely(listener, SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS);
             return;
         }
+
+        cancelCurrentSession();
 
         final int sessionId = sessionCounter.incrementAndGet();
         beginningReported = false;
@@ -279,6 +321,9 @@ public class VnRecognitionService extends RecognitionService {
 
     @Override
     protected void onStopListening(Callback listener) {
+        if (!isCallerAuthorizedForMic() || !isCallbackCallerAuthorized(listener)) {
+            return;
+        }
         if (delegateRecognizer != null) {
             try {
                 delegateRecognizer.stopListening();
@@ -293,6 +338,9 @@ public class VnRecognitionService extends RecognitionService {
 
     @Override
     protected void onCancel(Callback listener) {
+        if (!isCallerAuthorizedForMic() || !isCallbackCallerAuthorized(listener)) {
+            return;
+        }
         cancelCurrentSession();
     }
 

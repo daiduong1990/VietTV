@@ -35,18 +35,7 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-
-      - name: Ensure Android SDK Platform 34 & Build-Tools 34.0.0
-        run: |
-          yes | sdkmanager --licenses >/dev/null || true
-          sdkmanager "platforms;android-34" "build-tools;34.0.0"
-
-      - name: Run Zero-PII Fortress Scan & Unit Tests
-        run: npm test
-
-      - name: Build Signed Release APK & SHA-256 Digest
+      - name: Build Signed Release APK & Auto-Bootstrap Android SDK 34
         env:
           VIETTV_KEYSTORE_BASE64: ${{ secrets.VIETTV_KEYSTORE_BASE64 }}
           VIETTV_KEYSTORE_PASS: ${{ secrets.VIETTV_KEYSTORE_PASS }}
@@ -57,9 +46,13 @@ jobs:
             mkdir -p .build_cache
             echo "$VIETTV_KEYSTORE_BASE64" | base64 --decode > .build_cache/release.keystore
             export VIETTV_KEYSTORE_PATH="$PWD/.build_cache/release.keystore"
+            echo "HAS_RELEASE_KEYSTORE=true" >> "$GITHUB_ENV"
           fi
           npm run build:apk
           rm -f .build_cache/release.keystore
+
+      - name: Run Zero-PII Fortress, Security & JDK 17 JVM Tests
+        run: npm test
 
       - name: Upload VietTV-Launcher APK & SHA-256 Artifact
         uses: actions/upload-artifact@v4
@@ -71,7 +64,7 @@ jobs:
           if-no-files-found: error
 
       - name: Publish GitHub Release on Tag
-        if: startsWith(github.ref, 'refs/tags/v')
+        if: startsWith(github.ref, 'refs/tags/v') && env.HAS_RELEASE_KEYSTORE == 'true'
         uses: softprops/action-gh-release@v2
         with:
           generate_release_notes: true

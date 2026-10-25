@@ -2,9 +2,20 @@
 
 > **Giao diện Apple TV 4K Tiếng Việt siêu mượt, Bàn phím Telex D-Pad, Giọng nói Rảnh tay Offline & Trình tối ưu RAM đa hãng cho mọi Android TV · Google TV · Tivi nội địa Trung Quốc.**
 
+[![Build & Security Audit](https://github.com/daiduong1990/VietTV/actions/workflows/build-release.yml/badge.svg)](https://github.com/daiduong1990/VietTV/actions/workflows/build-release.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-emerald.svg)](LICENSE)
 [![Android API](https://img.shields.io/badge/Android%20TV-8.0%2B%20(API%2026--34)-blue.svg)](launcher/app/src/main/AndroidManifest.xml)
 [![Zero Telemetry](https://img.shields.io/badge/Privacy-3%20KHÔNG%20(0%20Ads%20%C2%B7%200%20Tracking%20%C2%B7%200%20Shared%20Keys)-gold.svg)](SECURITY.md)
+
+---
+
+## 🖼️ Hình Ảnh Thực Tế Trên Tivi
+
+| Màn hình chính Apple TV 4K & Lịch Âm · Giá Vàng · Giá Xăng | Bàn phím Tiếng Việt Telex D-Pad & Gợi ý Tìm kiếm 1 chạm |
+|:---:|:---:|
+| ![Giao diện chính VietTV Launcher](docs/screenshots/01-home-dashboard.png)<br><sub>Giao diện kính mờ 60 FPS, Lịch Âm Việt Nam, Giá Vàng SJC & Xăng Petrolimex trực tiếp</sub> | ![Bàn phím Tiếng Việt Telex D-Pad](docs/screenshots/02-telex-keyboard.png)<br><sub>Gõ dấu Telex tự nhiên bằng điều khiển từ xa kèm hàng từ khóa gợi ý thông minh</sub> |
+| **Trợ lý Giọng nói Tiếng Việt Rảnh tay (`TvVoiceCommandRouter`)** | **Tùy chỉnh Bằng Điều khiển & Tương thích Đa hãng Tivi** |
+| ![Trợ lý giọng nói Tiếng Việt rảnh tay](docs/screenshots/03-voice-assistant.png)<br><sub>Giữ nút Micro để tìm SmartTube/YouTube, hẹn giờ ngủ, chỉnh âm lượng hoặc đổi cổng HDMI</sub> | ![Tùy chỉnh D-Pad và tương thích đa hãng](docs/screenshots/04-customization-and-brands.png)<br><sub>Tùy chỉnh trực tiếp trên Tivi, giọng nói 3 tầng miễn phí & kiến trúc bảo mật 3 KHÔNG</sub> |
 
 ---
 
@@ -74,6 +85,16 @@ Giữ nút **Micro** trên điều khiển (hoặc bấm biểu tượng Tìm ki
 - **Đổi giao diện & Hình nền 4K**: Vào nút **Cài đặt Giao diện** góc trên màn hình chính để chọn chủ đề (*Mặc định, Aurora, Phong cảnh 4K theo giờ, 6 Cột...*).
 - **Chuyển đổi Giá Xăng Vùng 1 / Vùng 2**: Bật/tắt bảng thông tin Giá Vàng - Giá Xăng và chọn đúng khu vực sinh sống (**Vùng 1** hoặc **Vùng 2** theo biểu giá Petrolimex) ngay trong mục Cài đặt.
 - **Gõ Tiếng Việt trên Bàn phím Telex**: Hỗ trợ đầy đủ phím điều hướng 4 chiều, hàng từ gợi ý thông minh trên đầu bàn phím và nút đọc chính tả bằng giọng nói.
+
+---
+
+## 📱 Bảng Tương Thích & Thích Ứng Đa Thiết Bị
+
+| Nhóm thiết bị | Dòng máy / Hãng tiêu biểu | Hệ điều hành & Độ phân giải | Tính năng thích ứng chuyên biệt |
+|---|---|---|---|
+| **Tivi Chính hãng Quốc tế** | **Sony Bravia**, **TCL / iFFALCON**, **Casper**, **Coocaa**, **Skyworth**, **Hisense**, **Chromecast Google TV** | Android TV / Google TV **8.0 – 14** (`720p HD` · `1080p FHD` · `4K UHD`) | Tự động dùng Google Speech sẵn có, giữ nguyên cấu hình Private DNS, HDMI-CEC (Bravia Sync / T-Link) và nút kênh TV Tuner |
+| **Tivi & Máy chiếu Nội địa Trung Quốc** | **Xiaomi MiTV**, **Redmi TV**, **XGIMI**, **Dangbei**, **Wanbo**, **JMGO**, **HY300 / HY320** | Android / PatchWall / MIUI TV **8.0+** (`720p HD` · `1080p FHD` · `4K UHD`) | Mở khóa nút Home & nút Micro vật lý, cài 1 chạm gói **Sherpa-ONNX Tiếng Việt Offline** trên CPU khi bị cắt dịch vụ Google, bảo toàn Bluetooth Wakeup |
+| **Android TV Box AOSP** | **Mi Box S / 4K**, **TX3 Mini**, **X96 Max**, **Mecool**, **H96 Max** | Android TV / AOSP **8.0 – 14** (`720p HD` · `1080p FHD` · `4K UHD`) | Giao diện siêu nhẹ mượt **60 FPS** ngay cả trên phần cứng RAM 1GB–2GB, biên dịch tăng tốc ARM Native AOT cho ứng dụng xem phim |
 
 ---
 

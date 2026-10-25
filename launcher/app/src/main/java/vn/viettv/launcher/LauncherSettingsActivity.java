@@ -35,6 +35,8 @@ import java.util.Set;
 public final class LauncherSettingsActivity extends Activity {
     private static final String TAG = "TvHome.Settings";
     private static final String VN_IME_ID = "vn.viettv.launcher/.VnTvImeService";
+    private static final String HOME_ACCESSIBILITY_ID = "vn.viettv.launcher/.HomeKeyService";
+    private static final String HOME_ACCESSIBILITY_ID_FULL = "vn.viettv.launcher/vn.viettv.launcher.HomeKeyService";
     private static final String VOICE_SEARCH_APP_KEY = "voice_search_app";
     private static final String VOICE_MODE_KEY = "voice_mode";
     private static final String VOICE_API_KEY = "voice_api_key";
@@ -61,6 +63,7 @@ public final class LauncherSettingsActivity extends Activity {
     private TextView voiceSearchAppChoice;
     private TextView voiceEngineChoice;
     private TextView imePickerChoice;
+    private TextView accessibilityChoice;
     private TextView animationsChoice;
     private TextView advancedChoice;
     private TextView followThemeChoice;
@@ -134,6 +137,9 @@ public final class LauncherSettingsActivity extends Activity {
 
         imePickerChoice = findViewById(R.id.imePickerChoice);
         imePickerChoice.setOnClickListener(v -> openImePickerOrSettings());
+
+        accessibilityChoice = findViewById(R.id.accessibilityChoice);
+        accessibilityChoice.setOnClickListener(v -> openAccessibilityHelper());
 
         animationsChoice = findViewById(R.id.animationsChoice);
         animationsChoice.setOnClickListener(v -> {
@@ -587,6 +593,59 @@ public final class LauncherSettingsActivity extends Activity {
         }
     }
 
+    private boolean isHomeKeyAccessibilityEnabled() {
+        try {
+            int enabled = Settings.Secure.getInt(getContentResolver(), Settings.Secure.ACCESSIBILITY_ENABLED, 0);
+            if (enabled != 1) {
+                return false;
+            }
+            String services = Settings.Secure.getString(
+                    getContentResolver(), Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES);
+            if (services == null || services.isEmpty()) {
+                return false;
+            }
+            return services.contains(HOME_ACCESSIBILITY_ID)
+                    || services.contains(HOME_ACCESSIBILITY_ID_FULL);
+        } catch (Throwable t) {
+            Log.d(TAG, "Cannot inspect accessibility services: " + t.getMessage());
+            return false;
+        }
+    }
+
+    private void openAccessibilityHelper() {
+        BootReceiver.enforcePowerAndHomeGuard(this);
+        if (isHomeKeyAccessibilityEnabled()) {
+            Toast.makeText(this,
+                    "Dịch vụ Nút Home & Giọng nói (Trợ năng) đang hoạt động!",
+                    Toast.LENGTH_SHORT).show();
+            refresh();
+        } else {
+            Toast.makeText(this,
+                    "Hãy chọn VietTV trong mục Trợ năng để bật Nút Home & Giọng nói",
+                    Toast.LENGTH_LONG).show();
+        }
+
+        Intent accIntent = TvHardwareProfiler.resolveSystemSettingsIntent(
+                this, Settings.ACTION_ACCESSIBILITY_SETTINGS);
+        try {
+            startActivity(accIntent);
+            return;
+        } catch (ActivityNotFoundException | SecurityException e) {
+            Log.w(TAG, "Accessibility settings unavailable directly: " + e.getMessage());
+        }
+
+        try {
+            startActivity(TvHardwareProfiler.resolveSystemSettingsIntent(this, Settings.ACTION_SETTINGS));
+            Toast.makeText(this,
+                    "Tivi ẩn lối tắt Trợ năng — hãy vào Cài đặt > Trợ năng (Accessibility) để bật VietTV",
+                    Toast.LENGTH_LONG).show();
+        } catch (ActivityNotFoundException | SecurityException fallbackErr) {
+            Toast.makeText(this,
+                    "ROM Tivi này ẩn mục Trợ năng hệ thống",
+                    Toast.LENGTH_LONG).show();
+        }
+    }
+
     private void showWallpaperPicker() {
         File dir = Config.dir(this);
         List<File> images = new ArrayList<>(WallpaperRotation.images(
@@ -722,6 +781,14 @@ public final class LauncherSettingsActivity extends Activity {
             imePickerChoice.setText("⌨️ Bật / Chọn Bàn phím Tiếng Việt Telex: Đã bật (Nhấn để chọn)");
         } else {
             imePickerChoice.setText("⌨️ Bật / Chọn Bàn phím Tiếng Việt Telex");
+        }
+
+        if (accessibilityChoice != null) {
+            if (isHomeKeyAccessibilityEnabled()) {
+                accessibilityChoice.setText("♿ Bật dịch vụ Nút Home & Giọng nói (Trợ năng): Đang bật");
+            } else {
+                accessibilityChoice.setText("♿ Bật dịch vụ Nút Home & Giọng nói (Trợ năng)");
+            }
         }
 
         animationsChoice.setText(getString(R.string.animations_state,

@@ -828,10 +828,10 @@ public final class VoiceSearchActivity extends Activity {
         retryBadgeView.setVisibility(View.GONE);
 
         if (launchMode == MODE_IME_DICTATE) {
-            Intent bcast = new Intent(ACTION_IME_VOICE_RESULT)
+            Intent imeBroadcast = new Intent(VnTvImeService.ACTION_IME_VOICE_RESULT)
                     .setPackage(getPackageName())
                     .putExtra("text", transcript);
-            sendBroadcast(bcast);
+            sendBroadcast(imeBroadcast, VnTvImeService.PERMISSION_INTERNAL_IPC);
             titleView.setText("✓ Đã nhập: " + transcript);
             subtitleView.setText("Đã chèn văn bản vào bàn phím");
             mainHandler.postDelayed(this::finish, 320L);

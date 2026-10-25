@@ -18,6 +18,21 @@ VietTV (`vn.viettv.launcher`) giao tiếp trực tiếp với Tivi trong phòng 
 
 ---
 
+## 🔒 5 Lớp Phòng Thủ Chiều Sâu (5 Defense-in-Depth Layers)
+
+1. **Zero Shared Keys (Không khóa API dùng chung)**:
+   - Tuyệt đối không nhúng bất kỳ khóa API đám mây dùng chung nào trong mã nguồn hay APK. Hệ thống nhận diện giọng nói ưu tiên Google Speech sẵn có trên Tivi hoặc gói **K2-FSA Sherpa-ONNX Offline** miễn phí chạy 100% trên CPU Tivi; người dùng nâng cao có thể tùy chọn nhập khóa cá nhân cục bộ của riêng mình.
+2. **Signature-Protected `INTERNAL_IPC` Keystroke Receiver (Khóa chữ ký số IPC bàn phím)**:
+   - Giao tiếp nội bộ giữa trình nhận diện giọng nói và bàn phím Tiếng Việt (`VnTvImeService`) được bảo vệ bằng quyền chữ ký riêng `vn.viettv.launcher.permission.INTERNAL_IPC` (`android:protectionLevel="signature"`) kết hợp cờ `Context.RECEIVER_NOT_EXPORTED`, chặn đứng mọi ứng dụng bên thứ ba giả mạo Intent bơm phím trái phép.
+3. **`Binder.getCallingUid` Microphone Guard (Xác thực định danh tiến trình gọi Micro)**:
+   - Dịch vụ nhận diện giọng nói (`VnRecognitionService`) đối chiếu trực tiếp `Binder.getCallingUid()` trước khi mở luồng thu âm (chỉ chấp nhận chính ứng dụng, `SYSTEM_UID`/`SHELL_UID` hoặc dịch vụ trợ lý/bàn phím mặc định đang được hệ thống ủy quyền), ngăn chặn ứng dụng lạ lạm dụng quyền thu âm ngầm.
+4. **HTTPS + RFC1918-Only LAN Whisper Enforcement with Redirect Lock (Chống rò rỉ khóa & SSRF)**:
+   - Khi người dùng cấu hình máy chủ STT cá nhân (`VoiceSttClient`), mọi điểm cuối Internet công cộng bắt buộc phải dùng `https://`. Giao thức `http://` chỉ được phép đối với địa chỉ IPv4 mạng nội bộ gia đình chuẩn RFC1918 (`10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`) hoặc `localhost`, đồng thời khóa cứng `setInstanceFollowRedirects(false)` để ngăn tấn công chuyển hướng đánh cắp Authorization header.
+5. **Strict Regex-Sanitized ADB Shell Commands (Khử độc tham số lệnh ADB Shell)**:
+   - Bộ công cụ `tools/viettv.js` xác thực nghiêm ngặt mọi tên gói (`isSafePackageName`) và định danh dịch vụ/thành phần (`isSafeComponentId`) bằng biểu thức chính quy chặt chẽ trước khi thực thi `pm enable`, `pm disable-user`, `cmd package compile`, `ime enable`, `ime set`, `enabled_accessibility_services` và `voice_recognition_service` — loại bỏ hoàn toàn nguy cơ command injection ngay cả khi file `snapshot.json` bị chỉnh sửa độc hại.
+
+---
+
 ## 📩 Báo cáo Lỗ hổng Bảo mật (Reporting a Vulnerability)
 
 Vui lòng **không** mở Issue công khai nếu bạn phát hiện lỗi bảo mật tiềm ẩn. Thay vào đó:
@@ -36,7 +51,10 @@ Vui lòng **không** mở Issue công khai nếu bạn phát hiện lỗi bảo 
 
 ## English Summary
 
-VietTV enforces a strict **Zero-PII, Zero-Telemetry, Zero-Embedded-Secret** architecture:
-- `npm test` runs a deterministic repository-wide scanner blocking any API keys, personal IPs, MAC addresses, or legacy package namespaces on every commit and PR.
-- Multi-brand TV optimization (`tools/viettv.js`) strictly protects core system/tuner/CEC/BLE wakeup packages (`UNIVERSAL_PROTECTED_PACKAGES`) and creates an automatic per-device `.backups/<device>/snapshot.json` snapshot prior to disabling any vendor adware so `--restore` always returns the TV to its exact pre-optimization state.
+VietTV enforces a strict **Zero-PII, Zero-Telemetry, Zero-Embedded-Secret** architecture backed by **5 defense-in-depth layers**:
+1. **Zero Shared Keys**: No shared cloud API keys are ever bundled; voice search defaults to native TV speech services or 100% local CPU **K2-FSA Sherpa-ONNX Offline** Vietnamese ASR.
+2. **Signature-Protected `INTERNAL_IPC` Keystroke Receiver**: Internal speech-to-IME broadcast intents require `android:protectionLevel="signature"` (`INTERNAL_IPC`) with `RECEIVER_NOT_EXPORTED`.
+3. **`Binder.getCallingUid` Microphone Guard**: `VnRecognitionService` verifies caller UID provenance before opening microphone audio streams.
+4. **HTTPS + RFC1918-Only LAN Whisper Enforcement with Redirect Lock**: `VoiceSttClient` enforces `https://` for all public endpoints, restricts `http://` strictly to RFC1918 private LAN / loopback hosts, and disables HTTP redirects (`setInstanceFollowRedirects(false)`).
+5. **Strict Regex-Sanitized ADB Shell Commands**: `tools/viettv.js` enforces `isSafePackageName` and `isSafeComponentId` regex whitelists across all `adb shell` package/IME/accessibility/voice operations, backed by automated `npm test` repository-wide Zero-PII/Secret & JVM security checks.
 - Please report security vulnerabilities privately via GitHub's **Security -> Report a vulnerability** tab.

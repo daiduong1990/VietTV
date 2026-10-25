@@ -10,6 +10,7 @@ import android.graphics.drawable.GradientDrawable;
 import android.inputmethodservice.InputMethodService;
 import android.os.Build;
 import android.text.TextUtils;
+import android.util.DisplayMetrics;
 import android.util.Log;
 import android.util.TypedValue;
 import android.view.Gravity;
@@ -36,6 +37,7 @@ public class VnTvImeService extends InputMethodService {
 
     public static final String ACTION_IME_VOICE_RESULT = "vn.viettv.launcher.ACTION_IME_VOICE_RESULT";
     public static final String ACTION_IME_DICTATE = "vn.viettv.launcher.ACTION_IME_DICTATE";
+    public static final String PERMISSION_INTERNAL_IPC = "vn.viettv.launcher.permission.INTERNAL_IPC";
     public static final int XIAOMI_VOICE_SCANCODE = 63;
 
     private static volatile VnTvImeService activeVisibleInstance = null;
@@ -142,9 +144,9 @@ public class VnTvImeService extends InputMethodService {
         super.onCreate();
         IntentFilter filter = new IntentFilter(ACTION_IME_VOICE_RESULT);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            registerReceiver(voiceResultReceiver, filter, Context.RECEIVER_EXPORTED);
+            registerReceiver(voiceResultReceiver, filter, PERMISSION_INTERNAL_IPC, null, Context.RECEIVER_NOT_EXPORTED);
         } else {
-            registerReceiver(voiceResultReceiver, filter);
+            registerReceiver(voiceResultReceiver, filter, PERMISSION_INTERNAL_IPC, null);
         }
         receiverRegistered = true;
     }
@@ -984,12 +986,22 @@ public class VnTvImeService extends InputMethodService {
         cell.view.setBackground(bg);
     }
 
+    private float compactScale() {
+        DisplayMetrics dm = getResources().getDisplayMetrics();
+        float screenHeightDp = dm.heightPixels / Math.max(1f, dm.density);
+        return screenHeightDp <= 560f ? 0.84f : 1.0f;
+    }
+
     private int dp(int value) {
+        if (value == 0) {
+            return 0;
+        }
         float density = getResources().getDisplayMetrics().density;
-        return Math.round(value * density);
+        int px = Math.round(value * density * compactScale());
+        return value > 0 ? Math.max(1, px) : px;
     }
 
     private float dpF(float value) {
-        return value * getResources().getDisplayMetrics().density;
+        return value * getResources().getDisplayMetrics().density * compactScale();
     }
 }

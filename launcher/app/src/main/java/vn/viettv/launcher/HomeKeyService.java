@@ -126,10 +126,19 @@ public class HomeKeyService extends AccessibilityService {
                 filter.addAction(Intent.ACTION_SCREEN_ON);
                 filter.addAction(Intent.ACTION_SCREEN_OFF);
                 filter.addAction(Intent.ACTION_USER_PRESENT);
-                filter.addAction("mitv.action.STR_BOOT_COMPLETED");
-                filter.addAction("com.xiaomi.mitv.settings.BLE_CONNECTED");
-                filter.addAction("com.xiaomi.mitv.voice.SHORTPRESS");
-                registerReceiver(wakeReceiver, filter);
+                if (TvHardwareProfiler.isXiaomiMitvRom()) {
+                    filter.addAction("mitv.action.STR_BOOT_COMPLETED");
+                    filter.addAction("com.xiaomi.mitv.settings.BLE_CONNECTED");
+                    filter.addAction("com.xiaomi.mitv.voice.SHORTPRESS");
+                }
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    int flags = TvHardwareProfiler.isXiaomiMitvRom()
+                            ? Context.RECEIVER_EXPORTED
+                            : Context.RECEIVER_NOT_EXPORTED;
+                    registerReceiver(wakeReceiver, filter, flags);
+                } else {
+                    registerReceiver(wakeReceiver, filter);
+                }
                 wakeReceiverRegistered = true;
             } catch (Throwable e) {
                 Log.w(TAG, "Wake receiver registration skipped: " + e.getMessage());

@@ -7,6 +7,7 @@ import android.os.Looper;
 import android.util.Log;
 
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
@@ -580,7 +581,11 @@ public final class LivePrices {
     }
 
     public static String httpGet(String urlStr) throws Exception {
+        if (urlStr == null || !urlStr.startsWith("https://")) {
+            throw new IOException("HTTPS required");
+        }
         HttpURLConnection conn = (HttpURLConnection) new URL(urlStr).openConnection();
+        conn.setInstanceFollowRedirects(true);
         conn.setConnectTimeout(CONNECT_TIMEOUT_MS);
         conn.setReadTimeout(READ_TIMEOUT_MS);
         conn.setRequestProperty("User-Agent", USER_AGENT);

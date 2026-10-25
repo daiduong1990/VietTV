@@ -134,6 +134,13 @@
             android:ellipsize="end" />
 
         <TextView
+            android:id="@+id/accessibilityChoice"
+            style="@style/SettingsRow"
+            android:layout_marginTop="10dp"
+            android:singleLine="true"
+            android:ellipsize="end" />
+
+        <TextView
             android:id="@+id/animationsChoice"
             style="@style/SettingsRow"
             android:layout_marginTop="28dp" />

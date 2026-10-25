@@ -325,7 +325,7 @@ function compileAndLinkResources(aapt2Bin, androidJar, manifestPath, extraResDir
       '--extra-packages', EXTRA_R_PACKAGES, '-o', unalignedApk,
       ...overlayFlags, '-R', compiledResZip, '--auto-add-overlay',
       '--min-sdk-version', '26', '--target-sdk-version', '34',
-      '--version-code', '100', '--version-name', '1.0.0'
+      '--version-code', '101', '--version-name', '1.0.1'
     ],
     { stdio: 'inherit' }
   );
