@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">VietTV Launcher</string>
+    <string name="inputs">Nguồn vào</string>
+    <string name="wifi">Wi-Fi</string>
+    <string name="power_off">Tắt nguồn</string>
+    <string name="power_off_tv">Tắt nguồn TV (Chế độ chờ)</string>
+    <string name="settings">Cài đặt</string>
+    <string name="choose_input">Nguồn vào</string>
+    <string name="connected">Đã kết nối</string>
+    <string name="standby">Chờ</string>
+    <string name="not_connected">Không có thiết bị</string>
+    <string name="live_tv">Truyền hình</string>
+    <string name="no_inputs">Không tìm thấy nguồn vào</string>
+    <string name="good_morning">Chào buổi sáng</string>
+    <string name="good_afternoon">Chào buổi chiều</string>
+    <string name="good_evening">Chào buổi tối</string>
+    <string name="good_night">Chúc ngủ ngon</string>
+    <string name="ethernet">Mạng dây</string>
+    <string name="offline">Mất kết nối</string>
+    <string name="not_available">Không khả dụng trên TV này</string>
+    <string name="cant_open">Không thể mở %1$s</string>
+    <string name="date_format">EEEE, d MMMM</string>
+    <!-- Date next to the clock on Home; a locale can split it over two lines with \n. -->
+    <string name="date_format_home" translatable="false">@string/date_format</string>
+    <string name="stats_cpu">CPU %1$d%%</string>
+    <string name="stats_memory">RAM trống %1$d MB</string>
+    <string name="stats_storage">Bộ nhớ trống %1$s</string>
+    <string name="dream_name">Đồng hồ</string>
+    <string name="vpn">VPN</string>
+    <string name="vpn_off">Tắt VPN</string>
+    <string name="home_settings">Chọn màn hình chính mặc định</string>
+    <string name="home_settings_help">Chọn màn hình chính gốc để ngừng dùng VietTV Launcher, hoặc chọn VietTV Launcher để chuyển lại. Launcher gốc phải đang bật và TV phải hỗ trợ trình chọn màn hình chính.</string>
+    <string name="launcher_settings">Cài đặt giao diện</string>
+    <string name="columns_label">Số ứng dụng mỗi hàng</string>
+    <string name="rows_below_dock_label">Số hàng bên dưới thanh Dock</string>
+    <string name="wallpaper_label">Hình nền</string>
+    <string name="wallpaper_state">Hình nền: %1$s</string>
+    <string name="wallpaper_none">Không dùng</string>
+    <string name="wallpaper_applied">Đã đổi hình nền</string>
+    <string name="wallpaper_theme_default">Mặc định theo giao diện</string>
+    <string name="animations_state">Hiệu ứng chuyển động: %1$s</string>
+    <string name="advanced_effects">Hiệu ứng nâng cao</string>
+    <string name="advanced_effects_state">Hiệu ứng nâng cao: %1$s</string>
+    <string name="advanced_effects_warning">Thêm hiệu ứng nổi ô ứng dụng, phóng to biểu tượng và chuyển màu mượt mà. Có thể dùng thêm bộ nhớ tùy theo TV của bạn.</string>
+    <string name="follow_theme">Theo giao diện (đặt lại tùy chọn trên TV)</string>
+    <string name="follow_theme_hint">Sử dụng bố cục và hiệu ứng mặc định hoặc từ giao diện hiện tại. Việc áp dụng hoặc đặt lại giao diện cũng sẽ xóa các tùy chỉnh trên TV.</string>
+    <string name="tv_settings">Cài đặt hệ thống TV</string>
+    <string name="quick_picture">Hình ảnh</string>
+    <string name="quick_network">Mạng</string>
+    <string name="quick_apps">Ứng dụng</string>
+    <string name="quick_apps_hint">Bật lại</string>
+    <string name="on">Bật</string>
+    <string name="off">Tắt</string>
+    <string name="enable">Bật</string>
+    <string name="input_key_service_description">Mở bảng chọn nguồn vào khi nhấn nút Nguồn vào (Input) trên điều khiển.</string>
+    <string name="home_key_name">Nút Màn hình chính (Home)</string>
+    <string name="home_key_description">Giúp nút Home trên điều khiển mở giao diện này.</string>
+    <string name="card_prompt_title">Thẻ mới từ %1$s</string>
+    <string name="card_prompt_body">%1$s có thể hiển thị một thẻ trên màn hình chính. Nếu giữ ẩn, ô ứng dụng thông thường vẫn giữ nguyên.</string>
+    <string name="card_prompt_names">Tên thẻ là \'%1$s\'. Ứng dụng là \'%2$s\'.</string>
+    <string name="card_prompt_resigned">%1$s đã được cập nhật với khóa ký khác nên lựa chọn trước đó không còn hiệu lực. Vui lòng chọn lại cho thẻ này.</string>
+    <string name="card_prompt_relabelled">%1$s đã đổi tên thẻ kể từ lần trước bạn chọn. Vui lòng chọn lại.</string>
+    <string name="card_prompt_hint">Bạn có thể thay đổi sau bằng cách nhấn giữ OK tại Cài đặt, rồi chọn Thẻ mô-đun.</string>
+    <string name="card_prompt_identity">%1$s, khóa %2$s</string>
+    <string name="card_keep_hidden">Giữ ẩn</string>
+    <string name="card_show">Hiện thẻ</string>
+    <string name="card_not_saved">Không thể lưu lựa chọn</string>
+    <string name="module_cards">Thẻ mô-đun</string>
+    <string name="no_module_cards">Chưa cài đặt thẻ mô-đun nào</string>
+    <string name="card_app_name">Ứng dụng: %1$s</string>
+    <string name="card_state_shown">Đang hiện</string>
+    <string name="card_state_over_limit">Đang hiện, vượt giới hạn 8 thẻ</string>
+    <string name="card_state_hidden">Đang ẩn</string>
+    <string name="card_state_new">Mới</string>
+    <string name="card_state_new_key">Khóa mới</string>
+    <string name="card_state_new_label">Tên mới</string>
+    <string name="dock_edit">Chỉnh sửa thanh Dock</string>
+    <string name="dock_edit_hint">Chọn vị trí trên thanh Dock cần thay đổi rồi nhấn OK. Nhấn Quay lại để hoàn tất.</string>
+    <string name="dock_edit_pick_app">Chọn ứng dụng muốn đặt vào vị trí đó rồi nhấn OK. Nhấn Quay lại để chọn vị trí khác.</string>
+    <string name="reorder">Sắp xếp ứng dụng</string>
+    <string name="reorder_hint">Nhấn OK để chọn ứng dụng, dùng phím mũi tên để di chuyển, nhấn Quay lại để đặt xuống. Nhấn Quay lại lần nữa để hoàn tất.</string>
+    <string name="reorder_not_saved">Không thể lưu thứ tự mới</string>
+    <string name="app_library">Kho ứng dụng</string>
+    <string name="library_empty">Không tìm thấy ứng dụng có thể mở</string>
+    <string name="library_on_home">Đã có trên Màn hình chính</string>
+    <string name="library_add_home">Thêm vào Màn hình chính</string>
+    <string name="library_remove_shortcut">Gỡ khỏi Màn hình chính</string>
+    <string name="library_open">Mở</string>
+    <string name="library_app_info">Thông tin ứng dụng</string>
+    <string name="library_save_failed">Không thể lưu lối tắt</string>
+    <string name="library_recent">Mới · Thêm vào Màn hình chính</string>
+    <string name="library_hint_add">Nhấn để thêm vào Màn hình chính · Nhấn giữ để mở tùy chọn</string>
+    <string name="library_hint_open">Nhấn để mở · Nhấn giữ để mở tùy chọn</string>
+    <plurals name="library_app_count">
+        <item quantity="one">%1$d ứng dụng</item>
+        <item quantity="other">%1$d ứng dụng</item>
+    </plurals>
+    <!-- The greeting, then greeting_name: "Good morning, Mr. Trịnh". -->
+    <string name="greeting_with_name">%1$s, %2$s</string>
+
+    <!-- Race-weekend panel (RaceWeekend). Session names come from the calendar. -->
+    <string name="race_kicker">Chặng %1$d · %2$s · %3$s</string>
+    <string name="race_kicker_no_place">Chặng %1$d · %2$s</string>
+    <string name="race_next">%1$s sau %2$s</string>
+    <string name="race_lights_out">Xuất phát sau %1$s</string>
+    <string name="race_live">%1$s · Trực tiếp</string>
+    <string name="race_finished">Đã kết thúc chặng đua</string>
+    <!-- Cinematic top shelf (cinematic_home): the line under the focused dock app's name; %1$s is when it was
+         last opened, e.g. "5 minutes ago" or "yesterday, 9:40 pm". -->
+    <string name="last_opened">Mở gần nhất %1$s</string>
+
+    <!-- On-TV Remote Customization labels (VietTV Launcher) -->
+    <string name="settings_section_personalize" translatable="false">Cá nhân hóa Thanh Dock &amp; Bảng thông tin</string>
+    <string name="settings_section_voice_ime" translatable="false">Giọng nói &amp; Bàn phím Tiếng Việt</string>
+    <string name="settings_save" translatable="false">Lưu</string>
+    <string name="settings_reset_auto" translatable="false">Mặc định tự động</string>
+    <string name="dock_apps_title" translatable="false">Chọn ứng dụng ghim trên thanh Dock</string>
+    <string name="dashboard_cards_title" translatable="false">Chọn thẻ hiển thị trên Bảng thông tin</string>
+    <string name="fuel_region_title" translatable="false">Chọn khu vực giá xăng dầu Petrolimex</string>
+    <string name="greeting_name_title" translatable="false">Đặt lời chào tên riêng trên Màn hình chính</string>
+    <string name="voice_search_app_title" translatable="false">Chọn ứng dụng mở khi tìm kiếm video giọng nói</string>
+    <string name="voice_engine_title" translatable="false">Cấu hình Nhận diện Giọng nói Tiếng Việt</string>
+</resources>

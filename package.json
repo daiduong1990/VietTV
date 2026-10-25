@@ -1,0 +1,35 @@
+{
+  "name": "viettv",
+  "version": "1.0.0",
+  "description": "Giao diện Apple TV 4K Tiếng Việt, Bàn phím Telex D-Pad, Giọng nói Rảnh tay Offline & Trình tối ưu RAM an toàn đa hãng cho Android TV / Google TV / Tivi nội địa",
+  "license": "MIT",
+  "keywords": [
+    "android-tv",
+    "google-tv",
+    "vietnamese",
+    "telex-ime",
+    "launcher",
+    "offline-asr",
+    "sherpa-onnx",
+    "debloater",
+    "xiaomi-tv",
+    "sony-bravia",
+    "tcl-tv"
+  ],
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "bin": {
+    "viettv": "./tools/viettv.js"
+  },
+  "scripts": {
+    "build:apk": "node scripts/build_apk.js",
+    "start": "node tools/viettv.js --wizard",
+    "discover": "node tools/viettv.js --discover",
+    "install-tv": "node tools/viettv.js --install",
+    "optimize": "node tools/viettv.js --optimize",
+    "install-offline-voice": "node tools/viettv.js --install-offline-voice",
+    "restore": "node tools/viettv.js --restore",
+    "test": "node --test tests/viettv.test.js"
+  }
+}

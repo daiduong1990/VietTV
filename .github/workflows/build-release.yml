@@ -1,0 +1,80 @@
+name: Build & Release VietTV APK
+
+on:
+  push:
+    branches:
+      - main
+      - master
+    tags:
+      - 'v*'
+  pull_request:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-verify:
+    name: Zero-PII Audit, Unit Tests & Signed APK Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Setup Eclipse Temurin JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Ensure Android SDK Platform 34 & Build-Tools 34.0.0
+        run: |
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager "platforms;android-34" "build-tools;34.0.0"
+
+      - name: Run Zero-PII Fortress Scan & Unit Tests
+        run: npm test
+
+      - name: Build Signed Release APK & SHA-256 Digest
+        env:
+          VIETTV_KEYSTORE_BASE64: ${{ secrets.VIETTV_KEYSTORE_BASE64 }}
+          VIETTV_KEYSTORE_PASS: ${{ secrets.VIETTV_KEYSTORE_PASS }}
+          VIETTV_KEY_ALIAS: ${{ secrets.VIETTV_KEY_ALIAS }}
+          VIETTV_KEY_PASS: ${{ secrets.VIETTV_KEY_PASS }}
+        run: |
+          if [ -n "${VIETTV_KEYSTORE_BASE64:-}" ] && [ -n "${VIETTV_KEYSTORE_PASS:-}" ]; then
+            mkdir -p .build_cache
+            echo "$VIETTV_KEYSTORE_BASE64" | base64 --decode > .build_cache/release.keystore
+            export VIETTV_KEYSTORE_PATH="$PWD/.build_cache/release.keystore"
+          fi
+          npm run build:apk
+          rm -f .build_cache/release.keystore
+
+      - name: Upload VietTV-Launcher APK & SHA-256 Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: VietTV-Launcher
+          path: |
+            dist/VietTV-Launcher.apk
+            dist/VietTV-Launcher.apk.sha256
+          if-no-files-found: error
+
+      - name: Publish GitHub Release on Tag
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: |
+            dist/VietTV-Launcher.apk
+            dist/VietTV-Launcher.apk.sha256

@@ -1,0 +1,25 @@
+# Toolchains, build caches, and release artifacts
+.toolchain/
+.build_cache/
+.backups/
+dist/
+*.apk
+*.sha256
+
+# Signing keys and secrets
+*.keystore
+*.jks
+.env
+.env.*
+.env*
+
+# Node & OS artifacts
+node_modules/
+npm-debug.log*
+.DS_Store
+Thumbs.db
+
+# Personal / session data guards
+cookies*
+*_Backup/
+tv_screenshot*.png
